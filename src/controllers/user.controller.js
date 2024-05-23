@@ -13,6 +13,8 @@ const generateAccessAndRefreshTokens = async(userId) => {
 
         user.refreshToken = refreshToken
         await user.save({ validateBeforeSave: false })
+        console.log(refreshToken);
+        console.log(accessToken);
         return { accessToken, refreshToken }
 
 
@@ -110,7 +112,7 @@ const loginUser= asyncHandler(async(req, res)=>{
     // send cookies
     // response login complete
     const {email, username, password} = req.body
-    if (!username || !email){
+    if (!username && !email){
         throw new ApiError(400,"Username or Email required")
         }
     const user = await User.findOne({
@@ -125,14 +127,14 @@ const loginUser= asyncHandler(async(req, res)=>{
     }
     const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
-    const loggedInUser = await User.findById(user._id)
-    select("-password -refreshToken")
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
 
     const options = {
         httpOnly: true,
         secure: true
     }
-    return res.status(200).cookie ("accessToken",accessToken,options)
+    return res.status(200)
+    .cookie("accessToken",accessToken,options)
     .cookie("refreshToken",refreshToken,options)
     .json(
         new ApiResponse(
@@ -143,15 +145,14 @@ const loginUser= asyncHandler(async(req, res)=>{
             " User Login Successful"
         )
     )
-          
 })
 
 const logoutUser= asyncHandler(async(req, res)=>{
     await User.findByIdAndUpdate(
-        req.user._id,
+        req.body._id,
         {
-            $unset:{
-                refreshToken:1
+            $set:{
+                refreshToken: undefined,
             }
 
         },
@@ -163,11 +164,12 @@ const logoutUser= asyncHandler(async(req, res)=>{
         httpOnly: true,
         secure: true
     }
+
     return res
     .status(200)
-    .cookie("accessToken", options)
-    .cookie("refreshToken",options)
-    .json(new ApiResponse(200,{},"User logged Out!!"))
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged Out"))
 
 })
 
