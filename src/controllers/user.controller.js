@@ -324,7 +324,7 @@ const updateUserCoverImage= asyncHandler(async(req, res)=>{
     )
     
 })
-
+// now write  for the comment and like
 
 
 
